@@ -122,9 +122,17 @@ const generateMockInvoices = (): Invoice[] => {
     const totalTokens = invoiceAmount / tokenPrice;
     const logoColor = genericColors[i % genericColors.length];
     
-    // Some are fully funded, some have missing tokens
-    const isFunded = Math.random() > 0.8; 
-    const availableTokens = isFunded ? 0 : Math.floor(Math.random() * totalTokens);
+    const statuses: Invoice['status'][] = ['Pending', 'Tokenized', 'Funding', 'Fully Funded', 'Active', 'Matured', 'Settled', 'Defaulted'];
+    const status = statuses[i % statuses.length];
+    
+    let availableTokens = 0;
+    if (status === 'Pending' || status === 'Tokenized') {
+      availableTokens = totalTokens;
+    } else if (status === 'Funding') {
+      availableTokens = Math.max(1, Math.floor(totalTokens * (0.3 + Math.random() * 0.5))); // 30-80% available
+    } else {
+      availableTokens = 0;
+    }
     
     // Random dates
     const date = new Date(2026, 6 + Math.floor(Math.random() * 6), Math.floor(Math.random() * 28) + 1);
@@ -134,12 +142,13 @@ const generateMockInvoices = (): Invoice[] => {
     
     const docId = `doc-${i}`;
     
-    const numInvestors = isFunded ? Math.floor(Math.random() * 5) + 3 : Math.floor(Math.random() * 3);
+    const isClosed = status !== 'Pending' && status !== 'Tokenized' && status !== 'Funding';
+    const numInvestors = isClosed ? Math.floor(Math.random() * 5) + 3 : Math.floor(Math.random() * 3);
     const recentInvestors: InvestorAllocation[] = Array.from({ length: numInvestors }).map((_, idx) => ({
       id: `i-${i}-${idx}`,
       address: '0x' + Math.random().toString(16).substring(2, 6).toUpperCase() + '...' + Math.random().toString(16).substring(2, 6).toUpperCase(),
       shares: Math.floor(Math.random() * 10) + 1,
-      timestamp: isFunded ? `${Math.floor(Math.random() * 5 + 1)} days ago` : `${Math.floor(Math.random() * 10 + 1)} hours ago`,
+      timestamp: isClosed ? `${Math.floor(Math.random() * 5 + 1)} days ago` : `${Math.floor(Math.random() * 10 + 1)} hours ago`,
       value: Math.floor(Math.random() * 50000) + 5000,
       txHash: '0x' + Array.from({length: 8}, () => Math.floor(Math.random()*16).toString(16)).join(''),
       status: 'Confirmed'
@@ -162,7 +171,7 @@ const generateMockInvoices = (): Invoice[] => {
       totalTokens,
       availableTokens,
       technologyFeeRate: 0.005,
-      status: isFunded ? 'Funded' : 'Funding',
+      status,
       documents: [
         { id: docId, name: `Invoice #${10000+i}`, type: 'PDF', size: '1.4 MB', url: '#' },
       ],

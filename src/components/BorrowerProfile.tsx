@@ -4,6 +4,7 @@ import { formatCurrency, formatPercent, MOCK_INVOICES } from '../data';
 import { ArrowLeft, Building2, ExternalLink, TrendingUp, Bookmark } from 'lucide-react';
 import { BusinessLogo } from './InvoiceList';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 
 interface BorrowerProfileProps {
   borrowerName: string;
@@ -23,8 +24,8 @@ export const BorrowerProfile: React.FC<BorrowerProfileProps> = ({
   const invoices = MOCK_INVOICES.filter(inv => inv.borrowerName === borrowerName);
   const firstInvoice = invoices[0];
 
-  const totalFunded = invoices.filter(i => i.status === 'Funded').reduce((acc, curr) => acc + curr.invoiceAmount, 0);
-  const activeAmount = invoices.filter(i => i.status === 'Funding').reduce((acc, curr) => acc + curr.invoiceAmount, 0);
+  const totalFunded = invoices.filter(i => !['Pending', 'Tokenized', 'Funding'].includes(i.status)).reduce((acc, curr) => acc + curr.invoiceAmount, 0);
+  const activeAmount = invoices.filter(i => ['Funding', 'Tokenized'].includes(i.status)).reduce((acc, curr) => acc + curr.invoiceAmount, 0);
   const avgYield = invoices.reduce((acc, curr) => acc + curr.yieldRate, 0) / (invoices.length || 1);
 
   // Generate some mock historical yield data to make the chart look nice
@@ -135,9 +136,7 @@ export const BorrowerProfile: React.FC<BorrowerProfileProps> = ({
                       <div className="text-xs text-gray-500 mt-1">{inv.termDays} days • {inv.maturityDate}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${inv.status === 'Funded' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                        {inv.status}
-                      </span>
+                      <InvoiceStatusBadge status={inv.status} />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button 

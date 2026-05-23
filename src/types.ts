@@ -36,6 +36,8 @@ export interface LineItem {
   unitPrice: number;
 }
 
+export type InvoiceStatus = 'Pending' | 'Tokenized' | 'Funding' | 'Fully Funded' | 'Active' | 'Matured' | 'Settled' | 'Defaulted';
+
 export interface Invoice {
   id: string;
   borrowerName: string;
@@ -53,7 +55,7 @@ export interface Invoice {
   totalTokens: number;
   availableTokens: number;
   technologyFeeRate: number; // e.g. 0.005
-  status: 'Funding' | 'Funded' | 'Matured';
+  status: InvoiceStatus;
   documents: Document[];
   recentInvestors: InvestorAllocation[];
 }

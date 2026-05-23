@@ -78,7 +78,7 @@ export const Portfolio = ({
               {watchedBorrowers.map(name => {
                 const bInvoices = MOCK_INVOICES.filter(i => i.borrowerName === name);
                 const firstInvoice = bInvoices[0];
-                const active = bInvoices.filter(i => i.status === 'Funding').length;
+                const active = bInvoices.filter(i => i.status === 'Funding' || i.status === 'Tokenized').length;
                 return (
                   <div 
                     key={name}
@@ -226,7 +226,7 @@ export const Portfolio = ({
             {watchedBorrowers.map(name => {
               const bInvoices = MOCK_INVOICES.filter(i => i.borrowerName === name);
               const firstInvoice = bInvoices[0];
-              const active = bInvoices.filter(i => i.status === 'Funding').length;
+              const active = bInvoices.filter(i => i.status === 'Funding' || i.status === 'Tokenized').length;
               return (
                 <div 
                   key={name}

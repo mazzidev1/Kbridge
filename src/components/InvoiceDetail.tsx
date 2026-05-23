@@ -6,6 +6,7 @@ import { ArrowLeft, Clock, Building2, ShieldCheck, Download, Link as LinkIcon, D
 import { InvestorAllocation, UserInvestment, Document, Invoice } from '../types';
 import { DocumentPreviewModal } from './DocumentPreviewModal';
 import { BusinessLogo } from './InvoiceList';
+import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 
 interface InvoiceDetailProps {
   invoice: Invoice;
@@ -84,7 +85,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
 
   // Simulate live network ledger updates
   useEffect(() => {
-    if (invoice.status !== 'Funding') return;
+    if (invoice.status !== 'Funding' && invoice.status !== 'Tokenized') return;
     
     let isMounted = true;
     const interval = setInterval(() => {
@@ -168,13 +169,14 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                 <BusinessLogo name={invoice.borrowerName} sector={invoice.sector} color={invoice.logoColor} className="h-14 w-14 sm:h-16 sm:w-16 text-xl sm:text-2xl rounded-xl hover:opacity-80 transition-opacity" />
               </div>
               <div className="w-full">
-                <div className="flex items-center space-x-3 mb-2">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
                   <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-800 border border-blue-100">
                     {invoice.originator} Originated
                   </div>
                   <span className="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
                     {invoice.id}
                   </span>
+                  <InvoiceStatusBadge status={invoice.status} />
                 </div>
                 <h1 
                   className="text-2xl font-bold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"

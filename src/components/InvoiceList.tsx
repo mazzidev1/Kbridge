@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Invoice } from '../types';
+import { Invoice, InvoiceStatus } from '../types';
 import { formatCurrency, formatPercent, MOCK_INVOICES } from '../data';
 import { Download, FileSpreadsheet, Building2, ChevronRight, FileText, Search, Filter, X, ArrowRight, ArrowUpRight } from 'lucide-react';
+import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 
 interface InvoiceListProps {
   onSelectInvoice: (id: string) => void;
@@ -37,9 +38,21 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onSelectInvoice, onSel
   const [showSectorDropdown, setShowSectorDropdown] = useState(false);
   const [selectedYields, setSelectedYields] = useState<string[]>([]);
   const [showYieldDropdown, setShowYieldDropdown] = useState(false);
+  const [selectedStatuses, setSelectedStatuses] = useState<InvoiceStatus[]>([]);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
   const availableSectors = Array.from(new Set(MOCK_INVOICES.map(i => i.sector)));
   const yieldOptions = ['< 5%', '5% - 7%', '> 7%'];
+  const statusOptions: InvoiceStatus[] = [
+    'Pending',
+    'Tokenized',
+    'Funding',
+    'Fully Funded',
+    'Active',
+    'Matured',
+    'Settled',
+    'Defaulted'
+  ];
 
   const filteredInvoices = MOCK_INVOICES.filter(inv => {
     const matchesSearch = inv.borrowerName.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -53,7 +66,9 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onSelectInvoice, onSel
       if (selectedYields.includes('> 7%') && inv.yieldRate > 7) matchesYield = true;
     }
 
-    return matchesSearch && matchesSector && matchesYield;
+    const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(inv.status);
+
+    return matchesSearch && matchesSector && matchesYield && matchesStatus;
   });
 
   const handleExport = (type: 'PDF' | 'Excel') => {
@@ -111,6 +126,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onSelectInvoice, onSel
                 onClick={() => {
                   setShowSectorDropdown(!showSectorDropdown);
                   setShowYieldDropdown(false);
+                  setShowStatusDropdown(false);
                 }}
                 className="w-full flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
               >
@@ -154,6 +170,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onSelectInvoice, onSel
                 onClick={() => {
                   setShowYieldDropdown(!showYieldDropdown);
                   setShowSectorDropdown(false);
+                  setShowStatusDropdown(false);
                 }}
                 className="w-full flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
               >
@@ -191,6 +208,66 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onSelectInvoice, onSel
                 </div>
               )}
             </div>
+
+            <div className="relative flex-1 sm:flex-none">
+              <button 
+                onClick={() => {
+                  setShowStatusDropdown(!showStatusDropdown);
+                  setShowSectorDropdown(false);
+                  setShowYieldDropdown(false);
+                }}
+                className="w-full flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                id="filter-status-button"
+              >
+                <Filter className="h-4 w-4 text-gray-500" />
+                <span className="truncate">{selectedStatuses.length === 0 ? 'All Statuses' : `${selectedStatuses.length} Statuses`}</span>
+              </button>
+              
+              {showStatusDropdown && (
+                <div className="absolute top-12 right-0 sm:left-0 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-2" id="filter-status-dropdown animate-in fade-in duration-100">
+                  <div className="px-4 py-2 border-b border-gray-100 flex justify-between items-center">
+                    <span className="text-xs font-semibold text-gray-500 uppercase">Status</span>
+                    {selectedStatuses.length > 0 && (
+                       <button onClick={() => setSelectedStatuses([])} className="text-xs text-blue-600 hover:underline" id="clear-status-filter">Clear</button>
+                    )}
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                    {statusOptions.map(status => {
+                      const dotColors: Record<InvoiceStatus, string> = {
+                        Pending: 'bg-slate-400',
+                        Tokenized: 'bg-indigo-500',
+                        Funding: 'bg-amber-500',
+                        'Fully Funded': 'bg-emerald-500',
+                        Active: 'bg-blue-500',
+                        Matured: 'bg-purple-500',
+                        Settled: 'bg-green-500',
+                        Defaulted: 'bg-red-500'
+                      };
+                      return (
+                        <label key={status} className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer" id={`status-option-${status.replace(/\s+/g, '-').toLowerCase()}`}>
+                          <input 
+                            type="checkbox" 
+                            className="rounded border-gray-300 text-black focus:ring-black mr-3"
+                            checked={selectedStatuses.includes(status)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedStatuses([...selectedStatuses, status]);
+                              } else {
+                                setSelectedStatuses(selectedStatuses.filter(s => s !== status));
+                              }
+                            }}
+                          />
+                          <span className="flex items-center text-sm text-gray-700">
+                            <span className={`h-2 w-2 rounded-full ${dotColors[status] || 'bg-gray-400'} mr-2`}></span>
+                            {status}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -210,83 +287,112 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onSelectInvoice, onSel
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredInvoices.map((inv) => (
-                <tr key={inv.id} className="hover:bg-gray-50 transition-colors group">
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <input 
-                      type="checkbox" 
-                      className="rounded border-gray-300 text-black focus:ring-black h-4 w-4 cursor-pointer"
-                      checked={comparedInvoiceIds.includes(inv.id)}
-                      onChange={() => handleToggleCompare(inv.id)}
-                    />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div 
-                        className="cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={(e) => {
-                           e.stopPropagation();
-                           if (onSelectBorrower) onSelectBorrower(inv.borrowerName);
+              {filteredInvoices.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-sm text-gray-505">
+                    <div className="flex flex-col items-center justify-center space-y-2">
+                      <Search className="h-8 w-8 text-gray-300" />
+                      <p className="font-semibold text-gray-700">No invoices match your filters</p>
+                      <p className="text-xs text-gray-400">Try clearing or adjusting your search query, sector, yield, or status filters.</p>
+                      <button 
+                        onClick={() => {
+                          setSearchQuery('');
+                          setSelectedSectors([]);
+                          setSelectedYields([]);
+                          setSelectedStatuses([]);
                         }}
+                        className="mt-2 text-xs font-semibold text-blue-650 hover:text-blue-800 hover:underline px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-lg transition-colors cursor-pointer"
                       >
-                        <BusinessLogo name={inv.borrowerName} sector={inv.sector} color={inv.logoColor} />
-                      </div>
-                      <div className="ml-4">
+                        Reset All Filters
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredInvoices.map((inv) => (
+                  <tr key={inv.id} className="hover:bg-gray-50 transition-colors group">
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-gray-300 text-black focus:ring-black h-4 w-4 cursor-pointer"
+                        checked={comparedInvoiceIds.includes(inv.id)}
+                        onChange={() => handleToggleCompare(inv.id)}
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
                         <div 
-                          className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+                          className="cursor-pointer hover:opacity-80 transition-opacity"
                           onClick={(e) => {
                              e.stopPropagation();
                              if (onSelectBorrower) onSelectBorrower(inv.borrowerName);
                           }}
                         >
-                          {inv.borrowerName}
+                          <BusinessLogo name={inv.borrowerName} sector={inv.sector} color={inv.logoColor} />
                         </div>
-                        <div className="text-sm font-mono text-gray-500 mt-0.5">{inv.id}</div>
+                        <div className="ml-4">
+                          <div 
+                            className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+                            onClick={(e) => {
+                               e.stopPropagation();
+                               if (onSelectBorrower) onSelectBorrower(inv.borrowerName);
+                            }}
+                          >
+                            {inv.borrowerName}
+                          </div>
+                          <div className="text-sm font-mono text-gray-500 mt-0.5">{inv.id}</div>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-mono font-medium text-gray-900">{formatCurrency(inv.invoiceAmount)}</div>
-                    <div className="text-xs text-gray-500 mt-1">{inv.sector}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-800 border border-blue-100">
-                      {inv.originator}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{formatPercent(inv.yieldRate)} APY</div>
-                    <div className="text-xs text-gray-500 mt-1">{inv.termDays} days • {inv.maturityDate}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="w-full max-w-[120px]">
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className={`font-medium ${inv.status === 'Funded' ? 'text-green-600' : 'text-gray-700'}`}>
-                          {inv.status}
-                        </span>
-                        <span className="font-mono text-gray-500">
-                          {inv.totalTokens - inv.availableTokens}/{inv.totalTokens}
-                        </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-mono font-medium text-gray-900">{formatCurrency(inv.invoiceAmount)}</div>
+                      <div className="text-xs text-gray-500 mt-1">{inv.sector}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-800 border border-blue-100">
+                        {inv.originator}
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-1.5">
-                        <div 
-                          className={`h-1.5 rounded-full ${inv.status === 'Funded' ? 'bg-green-500' : 'bg-black'}`}
-                          style={{ width: `${((inv.totalTokens - inv.availableTokens) / inv.totalTokens) * 100}%` }}
-                        ></div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{formatPercent(inv.yieldRate)} APY</div>
+                      <div className="text-xs text-gray-500 mt-1">{inv.termDays} days • {inv.maturityDate}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex flex-col space-y-2">
+                        <InvoiceStatusBadge status={inv.status} />
+                        
+                        {inv.status === 'Funding' || inv.status === 'Tokenized' ? (
+                          <div className="w-[145px] animate-in fade-in duration-200">
+                            <div className="flex justify-between items-baseline font-mono text-[10px] text-gray-500 mb-1">
+                              <span className="font-semibold text-gray-700">{inv.availableTokens.toLocaleString()} left</span>
+                              <span>/ {inv.totalTokens.toLocaleString()} total</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1 overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full transition-all duration-300 ${inv.status === 'Tokenized' ? 'bg-indigo-600' : 'bg-amber-500'}`}
+                                style={{ width: `${((inv.totalTokens - inv.availableTokens) / inv.totalTokens) * 100}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-[145px] text-[10px] font-mono text-gray-400">
+                            {inv.status === 'Pending' ? 'Awaiting mint' : 'Closed • 100% Filled'}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button 
-                      onClick={() => onSelectInvoice(inv.id)}
-                      className="inline-flex items-center text-sm font-semibold text-blue-600 hover:text-blue-900 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      Invest
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button 
+                        onClick={() => onSelectInvoice(inv.id)}
+                        className="inline-flex items-center text-sm font-semibold text-blue-600 hover:text-blue-900 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      >
+                        Invest
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -440,6 +546,16 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onSelectInvoice, onSel
                     </tr>
 
                     <tr>
+                      <td className="px-6 py-4 font-semibold text-gray-700 bg-gray-50/20">Invoice Status</td>
+                      <td className="px-6 py-4 border-l border-gray-100">
+                         <InvoiceStatusBadge status={invA.status} />
+                      </td>
+                      <td className="px-6 py-4 border-l border-gray-100">
+                         <InvoiceStatusBadge status={invB.status} />
+                      </td>
+                    </tr>
+
+                    <tr>
                       <td className="px-6 py-4 font-semibold text-gray-700 bg-gray-50/20">Progress Funded</td>
                       <td className="px-6 py-4 border-l border-gray-100">
                         <div className="flex items-center space-x-2 text-xs">
@@ -447,12 +563,12 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onSelectInvoice, onSel
                             {Math.round(((invA.totalTokens - invA.availableTokens) / invA.totalTokens) * 100)}%
                           </span>
                           <span className="font-mono text-gray-500">
-                            ({invA.totalTokens - invA.availableTokens}/{invA.totalTokens} tokens)
+                            ({(invA.status === 'Funding' || invA.status === 'Tokenized') ? `${invA.availableTokens.toLocaleString()}/${invA.totalTokens.toLocaleString()} shares left` : `0/${invA.totalTokens.toLocaleString()} shares left`})
                           </span>
                         </div>
                         <div className="w-full bg-gray-100 border border-gray-200 rounded-full h-1.5 mt-1.5 overflow-hidden">
                           <div 
-                            className={`h-full ${invA.status === 'Funded' ? 'bg-green-500' : 'bg-black'}`}
+                            className={`h-full ${['Pending', 'Tokenized', 'Funding'].includes(invA.status) ? 'bg-amber-500' : 'bg-green-500'}`}
                             style={{ width: `${((invA.totalTokens - invA.availableTokens) / invA.totalTokens) * 100}%` }}
                           ></div>
                         </div>
@@ -463,12 +579,12 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onSelectInvoice, onSel
                             {Math.round(((invB.totalTokens - invB.availableTokens) / invB.totalTokens) * 100)}%
                           </span>
                           <span className="font-mono text-gray-500">
-                            ({invB.totalTokens - invB.availableTokens}/{invB.totalTokens} tokens)
+                            ({(invB.status === 'Funding' || invB.status === 'Tokenized') ? `${invB.availableTokens.toLocaleString()}/${invB.totalTokens.toLocaleString()} shares left` : `0/${invB.totalTokens.toLocaleString()} shares left`})
                           </span>
                         </div>
                         <div className="w-full bg-gray-100 border border-gray-200 rounded-full h-1.5 mt-1.5 overflow-hidden">
                           <div 
-                            className={`h-full ${invB.status === 'Funded' ? 'bg-green-500' : 'bg-black'}`}
+                            className={`h-full ${['Pending', 'Tokenized', 'Funding'].includes(invB.status) ? 'bg-amber-500' : 'bg-green-500'}`}
                             style={{ width: `${((invB.totalTokens - invB.availableTokens) / invB.totalTokens) * 100}%` }}
                           ></div>
                         </div>
