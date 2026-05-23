@@ -1,0 +1,6 @@
+{
+  "name": "KBridge Portal",
+  "description": "Invoice financing portal linking originators to investors via blockchain tokens.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
