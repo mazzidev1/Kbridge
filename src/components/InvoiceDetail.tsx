@@ -15,9 +15,19 @@ interface InvoiceDetailProps {
   onInvest: (inv: Omit<UserInvestment, 'id' | 'timestamp' | 'txHash' | 'status'>) => void;
   backText: string;
   onViewBorrower: (name: string) => void;
+  availableBalance?: number;
 }
 
-export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, walletAddress, onConnect, onInvest, backText, onViewBorrower }) => {
+export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ 
+  invoice, 
+  onBack, 
+  walletAddress, 
+  onConnect, 
+  onInvest, 
+  backText, 
+  onViewBorrower,
+  availableBalance = 1500000
+}) => {
   const [sharesToBuy, setSharesToBuy] = useState<number>(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -407,11 +417,19 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, w
                   {invoice.availableTokens > 0 ? (
                     <>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Number of Tokens</label>
+                        <div className="flex justify-between items-center mb-2 animate-in fade-in duration-300">
+                          <label className="block text-sm font-medium text-gray-700">Number of Tokens</label>
+                          {walletAddress && (
+                            <span className="text-xs text-gray-500 font-medium">
+                              Bal: <span className="font-mono font-bold text-gray-950">{formatCurrency(availableBalance)}</span>
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-black focus-within:border-transparent">
                           <button 
-                            className="px-4 py-3 bg-gray-50 text-gray-500 hover:bg-gray-100 border-r border-gray-300 font-semibold"
+                            className="px-4 py-3 bg-gray-50 text-gray-500 hover:bg-gray-100 border-r border-gray-300 font-semibold select-none"
                             onClick={() => setSharesToBuy(Math.max(1, sharesToBuy - 1))}
+                            disabled={sharesToBuy <= 1}
                           >-</button>
                           <input 
                             type="number" 
@@ -422,8 +440,9 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, w
                             onChange={(e) => setSharesToBuy(Math.min(invoice.availableTokens, Math.max(1, parseInt(e.target.value) || 1)))}
                           />
                           <button 
-                            className="px-4 py-3 bg-gray-50 text-gray-500 hover:bg-gray-100 border-l border-gray-300 font-semibold"
+                            className="px-4 py-3 bg-gray-50 text-gray-500 hover:bg-gray-100 border-l border-gray-300 font-semibold select-none"
                             onClick={() => setSharesToBuy(Math.min(invoice.availableTokens, sharesToBuy + 1))}
+                            disabled={sharesToBuy >= invoice.availableTokens}
                           >+</button>
                         </div>
                         <input 
@@ -440,7 +459,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, w
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 space-y-3">
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-500">Total Commitment</span>
-                          <span className="font-mono font-medium">{formatCurrency(totalCost)}</span>
+                          <span className={`font-mono font-medium transition-colors duration-200 ${walletAddress && totalCost > availableBalance ? 'text-red-600 font-bold' : 'text-gray-950 shadow-sm'}`}>{formatCurrency(totalCost)}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-500">Est. Return ({invoice.termDays}d)</span>
@@ -448,10 +467,25 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, w
                         </div>
                       </div>
 
+                      {walletAddress && totalCost > availableBalance && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start space-x-2 animate-in fade-in duration-300">
+                          <AlertTriangle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+                          <p className="text-xs text-red-800 leading-relaxed">
+                            This investment exceeds your available wallet balance of <span className="font-mono font-bold">{formatCurrency(availableBalance)}</span>. Please acquire more USDC or decrease token count.
+                          </p>
+                        </div>
+                      )}
+
                       <button 
                         onClick={handleInvestClick}
-                        disabled={isProcessing}
-                        className={`w-full py-4 text-white rounded-lg font-medium transition-colors flex justify-center items-center disabled:opacity-70 ${walletAddress ? 'bg-black hover:bg-gray-800' : 'bg-blue-600 hover:bg-blue-700'}`}
+                        disabled={isProcessing || (walletAddress !== null && totalCost > availableBalance)}
+                        className={`w-full py-4 text-white rounded-lg font-medium transition-colors flex justify-center items-center disabled:opacity-70 ${
+                          !walletAddress 
+                            ? 'bg-blue-600 hover:bg-blue-700' 
+                            : (totalCost > availableBalance)
+                              ? 'bg-red-600 hover:bg-red-700 disabled:opacity-80'
+                              : 'bg-black hover:bg-gray-800'
+                        }`}
                       >
                         {isProcessing ? (
                           <div className="flex items-center">
@@ -461,13 +495,15 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, w
                             </svg>
                             Confirming via Smart Contract...
                           </div>
-                        ) : walletAddress ? (
-                          'Execute Investment'
-                        ) : (
+                        ) : !walletAddress ? (
                           <>
                             <Wallet className="h-4 w-4 mr-2" />
                             Connect Wallet to Invest
                           </>
+                        ) : totalCost > availableBalance ? (
+                          'Insufficient Balance'
+                        ) : (
+                          'Execute Investment'
                         )}
                       </button>
                     </>

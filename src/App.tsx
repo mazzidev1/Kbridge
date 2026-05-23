@@ -18,6 +18,15 @@ export default function App() {
   const [selectedBorrowerName, setSelectedBorrowerName] = useState<string | null>(null);
   
   const [userPortfolio, setUserPortfolio] = useState<UserInvestment[]>([]);
+  const [availableBalance, setAvailableBalance] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('user_balance');
+      return saved ? Number(saved) : 1500000;
+    } catch (e) {
+      return 1500000;
+    }
+  });
+
   const [watchedBorrowers, setWatchedBorrowers] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('watched_borrowers');
@@ -52,6 +61,14 @@ export default function App() {
       status: 'Confirmed'
     };
     setUserPortfolio([newInvestment, ...userPortfolio]);
+    
+    setAvailableBalance(prev => {
+      const nextBalance = Math.max(0, prev - investment.totalCost);
+      try {
+        localStorage.setItem('user_balance', String(nextBalance));
+      } catch (e) {}
+      return nextBalance;
+    });
   };
 
   if (!isAuthenticated) {
@@ -62,6 +79,7 @@ export default function App() {
     <div className="min-h-screen flex flex-col font-sans bg-gray-50">
       <Header 
         walletAddress={walletAddress}
+        availableBalance={availableBalance}
         onConnectClick={() => setShowWalletModal(true)}
         onDisconnect={() => setWalletAddress(null)}
         currentView={currentView}
@@ -73,6 +91,7 @@ export default function App() {
           <InvoiceDetail 
             key={selectedInvoice.id}
             invoice={selectedInvoice} 
+            availableBalance={availableBalance}
             onBack={() => {
                if (currentView === 'borrower') {
                  setSelectedInvoiceId(null);
