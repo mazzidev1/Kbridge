@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KundaLogo, CredableLogo } from './Header';
+import { KundaLogo } from './Header';
 import { Lock } from 'lucide-react';
 
 export const MockLogin = ({ onLogin }: { onLogin: () => void }) => {
@@ -22,10 +22,7 @@ export const MockLogin = ({ onLogin }: { onLogin: () => void }) => {
         <div className="flex justify-center flex-col items-center">
           <div className="flex items-center space-x-3 mb-4">
             <KundaLogo />
-            <span className="text-2xl font-medium tracking-tight text-gray-900 border-r border-gray-300 pr-6">kbridge</span>
-            <div className="pl-2 grayscale opacity-80">
-              <CredableLogo />
-            </div>
+            <span className="text-2xl font-medium tracking-tight text-gray-900">kbridge</span>
           </div>
           <h2 className="mt-2 text-center text-2xl font-bold text-gray-900 tracking-tight">
             Institutional Access

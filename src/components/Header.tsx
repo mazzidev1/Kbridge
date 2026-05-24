@@ -7,14 +7,7 @@ export const KundaLogo = () => (
   </div>
 );
 
-export const CredableLogo = () => (
-  <div className="flex items-center space-x-1 select-none">
-    <div className="h-5 w-5 md:h-6 md:w-6 rounded-full border-[2.5px] md:border-[3px] border-black flex items-center justify-center">
-      <div className="h-1.5 w-1.5 md:h-2 md:w-2 bg-black rounded-full"></div>
-    </div>
-    <span className="font-bold text-black tracking-tight text-base md:text-lg">credable</span>
-  </div>
-);
+
 
 interface HeaderProps {
   walletAddress: string | null;
@@ -68,13 +61,6 @@ export const Header: React.FC<HeaderProps> = ({ walletAddress, availableBalance 
                   Portfolio
                 </button>
               )}
-            </div>
-
-            <div className="hidden lg:flex items-center text-sm text-gray-500 border-l border-gray-200 pl-6 ml-2">
-              <span>Powered by</span>
-              <div className="ml-3 grayscale opacity-80 hover:opacity-100 hover:grayscale-0 transition-opacity">
-                <CredableLogo />
-              </div>
             </div>
           </div>
           
@@ -191,10 +177,6 @@ export const Header: React.FC<HeaderProps> = ({ walletAddress, availableBalance 
                   Portfolio
                 </button>
               )}
-            </div>
-            <div className="pt-4 pb-4 border-t border-gray-200 flex items-center justify-center text-sm text-gray-500">
-              <span className="mr-2">Powered by</span>
-              <CredableLogo />
             </div>
           </div>
         </>

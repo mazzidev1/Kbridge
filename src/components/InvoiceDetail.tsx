@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatCurrency, formatPercent, MOCK_INVOICES } from '../data';
-import { ArrowLeft, Clock, Building2, ShieldCheck, Download, Link as LinkIcon, Database, Check, Wallet, Eye, FileText, AlertTriangle, X, Info, TrendingUp, ArrowRightLeft, Users, Tag } from 'lucide-react';
+import { ArrowLeft, Clock, Building2, ShieldCheck, Download, Link as LinkIcon, Database, Check, Wallet, Eye, FileText, AlertTriangle, X, Info, TrendingUp, ArrowRightLeft, Users, Tag, PieChart } from 'lucide-react';
 import { InvestorAllocation, UserInvestment, Document, Invoice } from '../types';
 import { DocumentPreviewModal } from './DocumentPreviewModal';
 import { BusinessLogo } from './InvoiceList';
@@ -104,7 +104,9 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
     return [...currentInvoiceUserListings, ...secondaryListings];
   }, [userListings, secondaryListings, invoice.id]);
 
-  const handleBuySecondary = (listingId: string) => {
+  const [selectedSecondaryListing, setSelectedSecondaryListing] = useState<any | null>(null);
+
+  const handleBuySecondaryClick = (listingId: string) => {
     if (!walletAddress) {
       onConnect();
       return;
@@ -113,14 +115,26 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
     const listing = listingsToDisplay.find(l => l.id === listingId);
     if (!listing) return;
 
-    const cost = listing.shares * listing.price;
-    if (cost > availableBalance) {
-      alert(`Insufficient balance. This P2P purchase requires ${formatCurrency(cost)} USDC but your wallet only holds ${formatCurrency(availableBalance)} USDC.`);
+    if (listing.shares * listing.price > availableBalance) {
+      alert(`Insufficient balance. This P2P purchase requires ${formatCurrency(listing.shares * listing.price)} USDC but your wallet only holds ${formatCurrency(availableBalance)} USDC.`);
       return;
     }
 
+    setSelectedSecondaryListing(listing);
+  };
+
+  const confirmBuySecondary = () => {
+    if (!selectedSecondaryListing) return;
+    
+    const listingId = selectedSecondaryListing.id;
+    const listing = listingsToDisplay.find(l => l.id === listingId);
+    if (!listing) return;
+
+    const cost = listing.shares * listing.price;
+
     // Set buying state to true for this listing
     setSecondaryListings(prev => prev.map(l => l.id === listingId ? { ...l, isBuying: true } : l));
+    setSelectedSecondaryListing(null);
 
     setTimeout(() => {
       // Execute the purchase
@@ -696,7 +710,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                                   ) : (
                                     <button
                                       disabled={listing.isBuying || (walletAddress !== null && !isAffordable)}
-                                      onClick={() => handleBuySecondary(listing.id)}
+                                      onClick={() => handleBuySecondaryClick(listing.id)}
                                       className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center cursor-pointer ${
                                         listing.isBuying 
                                           ? 'bg-blue-100 text-blue-700' 
@@ -826,6 +840,52 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                   Confirm & Sign
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {selectedSecondaryListing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-gray-900 tracking-tight">Confirm Purchase</h3>
+              <button onClick={() => setSelectedSecondaryListing(null)} className="text-gray-400 hover:text-gray-600 bg-gray-100/50 p-2 rounded-full cursor-pointer transition-colors hover:bg-gray-200">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-5">
+              <div className="flex flex-col space-y-1 pb-4 border-b border-gray-100">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Institution / Seller</span>
+                <span className="text-sm font-mono text-gray-900 bg-gray-50 p-2 rounded border border-gray-100 break-all">{selectedSecondaryListing.seller}</span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 pb-4 border-b border-gray-100">
+                <div className="flex flex-col">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Shares</span>
+                  <span className="text-lg font-bold text-gray-900">{selectedSecondaryListing.shares.toLocaleString()}</span>
+                </div>
+                <div className="flex flex-col justify-end">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Cost</span>
+                  <span className="text-lg font-bold text-black">{formatCurrency(selectedSecondaryListing.shares * selectedSecondaryListing.price)}</span>
+                </div>
+              </div>
+              
+              <div className="flex flex-col bg-blue-50/50 border border-blue-100 p-4 rounded-xl">
+                <span className="text-xs font-bold text-blue-800 uppercase tracking-wider flex items-center mb-1">
+                  <PieChart className="h-3.5 w-3.5 mr-1" /> Facility Ownership
+                </span>
+                <p className="text-sm text-blue-900 mt-1">
+                  Buying this lot gives you <span className="font-bold">{(selectedSecondaryListing.shares / invoice.totalTokens * 100).toFixed(2)}%</span> total ownership of this facility.
+                </p>
+              </div>
+
+              <button
+                onClick={confirmBuySecondary}
+                className="w-full mt-4 flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.98] transition-all cursor-pointer"
+              >
+                Confirm & Pay
+              </button>
             </div>
           </div>
         </div>

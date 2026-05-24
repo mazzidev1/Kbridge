@@ -49,7 +49,7 @@ const generateMockInvoices = (): Invoice[] => {
       borrowerName: 'Acme Nuts & Bolts Manufacturing',
       borrowerDetails: 'Leading supplier of industrial fasteners in the Midwest region. Operating since 2012 with a solid track record of fulfillment.',
       logoColor: '#DC2626',
-      originator: 'Credable',
+      originator: 'Originator A',
       sector: 'Manufacturing',
       invoiceAmount: 100000,
       yieldRate: 5.0,
@@ -82,7 +82,7 @@ const generateMockInvoices = (): Invoice[] => {
       borrowerName: 'Global Timber Exports Ltd.',
       borrowerDetails: 'International distributor of specialized timber products. Main export market is Western Europe.',
       logoColor: '#16A34A',
-      originator: 'Finverity',
+      originator: 'Originator B',
       sector: 'Commodities',
       invoiceAmount: 250000,
       yieldRate: 7.2,
@@ -114,7 +114,7 @@ const generateMockInvoices = (): Invoice[] => {
   
   const additional = Array.from({ length: 23 }).map((_, i) => {
     const id = `INV-2026-${9000 + i}`;
-    const originator = i % 3 === 0 ? 'Finverity' : 'Credable';
+    const originator = i % 3 === 0 ? 'Originator B' : 'Originator A';
     const sector = genericCompanySurnames[i % genericCompanySurnames.length];
     const borrowerName = `${genericCompanyNames[i % genericCompanyNames.length]}${sector} Inc.`;
     const invoiceAmount = Math.floor(Math.random() * 80 + 20) * 10000;

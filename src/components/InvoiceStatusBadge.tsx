@@ -5,7 +5,7 @@ import { HelpCircle } from 'lucide-react';
 const STATUS_DETAILS: Record<InvoiceStatus, { label: string; description: string; bg: string; text: string; dot: string }> = {
   Pending: {
     label: 'Pending',
-    description: 'Invoice received from Finverity/CredAble, not yet tokenized',
+    description: 'Invoice received from originator, not yet tokenized',
     bg: 'bg-slate-100 border-slate-200 text-slate-700',
     text: 'text-slate-700',
     dot: 'bg-slate-400'
