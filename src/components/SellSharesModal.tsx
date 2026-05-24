@@ -28,6 +28,18 @@ export const SellSharesModal = ({
   const [askingPrice, setAskingPrice] = useState<number>(invoice.tokenPrice);
   const [sellMode, setSellMode] = useState<'instant' | 'listing'>('instant');
   const [step, setStep] = useState<'config' | 'sign' | 'success'>('config');
+
+  const handleSharesInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val === '') {
+      setSharesToSell(0);
+      return;
+    }
+    const parsed = parseInt(val, 10);
+    if (!isNaN(parsed)) {
+      setSharesToSell(Math.min(investment.shares, parsed));
+    }
+  };
   const [signProgress, setSignProgress] = useState<number>(0);
   const [txHash, setTxHash] = useState<string>('');
 
@@ -155,20 +167,38 @@ export const SellSharesModal = ({
               </div>
 
               {/* Slider for Shares to Sell */}
-              <div className="space-y-2 border border-gray-150 rounded-xl p-4.5 bg-white shadow-xs">
+              <div className="space-y-4 border border-gray-200 rounded-xl p-4.5 bg-white shadow-xs">
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-gray-500 font-medium">Fractional Lot Size to Sell</span>
-                  <span className="font-mono font-bold text-gray-950 bg-gray-100 px-2 py-0.5 rounded">{sharesToSell.toLocaleString()} Shares</span>
+                  <div className="relative flex items-center max-w-[155px]">
+                    <input
+                      type="number"
+                      min="1"
+                      max={investment.shares}
+                      value={sharesToSell === 0 ? '' : sharesToSell}
+                      onChange={handleSharesInputChange}
+                      onBlur={() => {
+                        if (sharesToSell < 1) {
+                          setSharesToSell(1);
+                        }
+                      }}
+                      className="w-full text-right py-1.5 pl-3 pr-14 text-xs font-mono font-bold border border-gray-300 rounded-lg outline-none focus:ring-1 focus:ring-black focus:border-black bg-gray-50/80"
+                    />
+                    <span className="absolute right-3 text-[10px] uppercase font-bold text-gray-400 font-sans pointer-events-none select-none">Shares</span>
+                  </div>
                 </div>
 
-                <div className="flex items-center space-x-3 pt-1">
+                <div className="flex items-center space-x-3 pt-0.5">
                   <input
                     type="range"
                     min="1"
                     max={investment.shares}
-                    value={sharesToSell}
+                    value={sharesToSell || 1}
                     onChange={(e) => setSharesToSell(parseInt(e.target.value) || 1)}
-                    className="flex-1 h-1.5 bg-gray-250 rounded-lg appearance-none cursor-pointer accent-black"
+                    className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
+                    style={{ 
+                      background: `linear-gradient(to right, #000000 0%, #000000 ${investment.shares > 1 ? ((sharesToSell - 1) / (investment.shares - 1)) * 100 : 0}%, #e5e7eb ${investment.shares > 1 ? ((sharesToSell - 1) / (investment.shares - 1)) * 100 : 0}%, #e5e7eb 100%)` 
+                    }}
                   />
                 </div>
 
@@ -177,25 +207,25 @@ export const SellSharesModal = ({
                   <div className="flex space-x-2">
                     <button 
                       onClick={() => setSharesToSell(Math.max(1, Math.floor(investment.shares * 0.25)))} 
-                      className="hover:text-black cursor-pointer bg-gray-50 hover:bg-gray-150 px-1.5 py-0.5 rounded border border-gray-200"
+                      className="hover:text-black cursor-pointer bg-gray-50 hover:bg-gray-100 px-2 py-0.5 rounded border border-gray-200 text-[10px]"
                     >
                       25%
                     </button>
                     <button 
                       onClick={() => setSharesToSell(Math.max(1, Math.floor(investment.shares * 0.50)))} 
-                      className="hover:text-black cursor-pointer bg-gray-50 hover:bg-gray-150 px-1.5 py-0.5 rounded border border-gray-200"
+                      className="hover:text-black cursor-pointer bg-gray-50 hover:bg-gray-100 px-2 py-0.5 rounded border border-gray-200 text-[10px]"
                     >
                       50%
                     </button>
                     <button 
                       onClick={() => setSharesToSell(Math.max(1, Math.floor(investment.shares * 0.75)))} 
-                      className="hover:text-black cursor-pointer bg-gray-50 hover:bg-gray-150 px-1.5 py-0.5 rounded border border-gray-200"
+                      className="hover:text-black cursor-pointer bg-gray-50 hover:bg-gray-100 px-2 py-0.5 rounded border border-gray-200 text-[10px]"
                     >
                       75%
                     </button>
                     <button 
                       onClick={() => setSharesToSell(investment.shares)} 
-                      className="hover:text-black cursor-pointer bg-gray-50 hover:bg-gray-150 px-1.5 py-0.5 rounded border border-gray-200"
+                      className="hover:text-black cursor-pointer bg-gray-50 hover:bg-gray-100 px-2 py-0.5 rounded border border-gray-200 text-[10px]"
                     >
                       MAX
                     </button>
@@ -427,8 +457,9 @@ export const SellSharesModal = ({
               </button>
               <button
                 type="button"
+                disabled={sharesToSell < 1 || sharesToSell > investment.shares}
                 onClick={handleStartTransaction}
-                className="flex-1 sm:flex-initial px-5 py-2 bg-black hover:bg-gray-800 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center cursor-pointer"
+                className="flex-1 sm:flex-initial px-5 py-2 bg-black hover:bg-gray-800 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed animate-in fade-in duration-200"
               >
                 {sellMode === 'instant' ? 'Confirm Instant Sale' : 'Confirm Order Offer'}
                 <ArrowRight className="h-3.5 w-3.5 ml-1.5" />

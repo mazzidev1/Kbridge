@@ -39,6 +39,8 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
   const [showConfirm, setShowConfirm] = useState(false);
   const [showContractPreview, setShowContractPreview] = useState(false);
 
+
+
   // Secondary Market listings for sold out invoices
   const [secondaryListings, setSecondaryListings] = useState<{
     id: string;
@@ -327,6 +329,8 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
             </div>
           </motion.div>
 
+
+
           {/* Blockchain Ledger & Documents Split */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Documents */}
@@ -552,6 +556,9 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                           value={sharesToBuy}
                           onChange={(e) => setSharesToBuy(parseInt(e.target.value))}
                           className="w-full mt-4 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
+                          style={{ 
+                            background: `linear-gradient(to right, #000000 0%, #000000 ${invoice.availableTokens > 1 ? ((sharesToBuy - 1) / (invoice.availableTokens - 1)) * 100 : 0}%, #e5e7eb ${invoice.availableTokens > 1 ? ((sharesToBuy - 1) / (invoice.availableTokens - 1)) * 100 : 0}%, #e5e7eb 100%)` 
+                          }}
                         />
                         <div className="text-right text-xs text-gray-500 mt-1">@ {formatCurrency(invoice.tokenPrice)} / token</div>
                       </div>
