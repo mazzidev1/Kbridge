@@ -376,13 +376,23 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onSelectInvoice, onSel
                       )}
                     </td>
                     <td className="px-4 py-4 pr-6 whitespace-nowrap text-right">
-                      <button 
-                        onClick={() => onSelectInvoice(inv.id)}
-                        className="inline-flex items-center justify-center px-4 py-1.5 border border-blue-200 bg-blue-50/60 hover:bg-blue-600 text-blue-700 hover:text-white text-xs font-bold rounded-lg cursor-pointer transition-all duration-200 active:scale-95 shadow-2xs"
-                      >
-                        Invest
-                        <ChevronRight className="h-3.5 w-3.5 ml-1 shrink-0" />
-                      </button>
+                      {inv.status === 'Defaulted' ? (
+                        <button 
+                          onClick={() => onSelectInvoice(inv.id)}
+                          className="inline-flex items-center justify-center px-4 py-1.5 border border-gray-200 bg-gray-50/60 hover:bg-gray-100 text-gray-700 hover:text-gray-900 text-xs font-bold rounded-lg cursor-pointer transition-all duration-200 active:scale-95 shadow-2xs"
+                        >
+                          View
+                          <ChevronRight className="h-3.5 w-3.5 ml-1 shrink-0" />
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => onSelectInvoice(inv.id)}
+                          className="inline-flex items-center justify-center px-4 py-1.5 border border-blue-200 bg-blue-50/60 hover:bg-blue-600 text-blue-700 hover:text-white text-xs font-bold rounded-lg cursor-pointer transition-all duration-200 active:scale-95 shadow-2xs"
+                        >
+                          Invest
+                          <ChevronRight className="h-3.5 w-3.5 ml-1 shrink-0" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

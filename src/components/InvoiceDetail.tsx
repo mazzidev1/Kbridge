@@ -488,7 +488,17 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
             </div>
             
             <div className="p-6 space-y-6">
-              {isSuccess ? (
+              {invoice.status === 'Defaulted' ? (
+                <div className="text-center py-8">
+                  <div className="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-sm">
+                    <AlertTriangle className="h-8 w-8 text-red-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Facility Defaulted</h3>
+                  <p className="text-sm text-gray-500 mb-6 text-balance">
+                    This facility has defaulted. Active trading and primary issuances have been suspended.
+                  </p>
+                </div>
+              ) : isSuccess ? (
                 <div className="text-center py-8">
                   <motion.div 
                     initial={{ scale: 0.8, opacity: 0 }}
