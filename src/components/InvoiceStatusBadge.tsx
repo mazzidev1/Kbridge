@@ -73,12 +73,12 @@ export const InvoiceStatusBadge: React.FC<{ status: InvoiceStatus; className?: s
       </span>
       
       {/* Floating Tooltip with nice entrance transition */}
-      <div className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-3 bg-gray-950 text-white rounded-lg text-xs leading-relaxed shadow-xl border border-gray-800 opacity-0 invisible scale-95 origin-bottom group-hover:opacity-100 group-hover:visible group-hover:scale-100 transition-all duration-300 pointer-events-none">
+      <div className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-3 bg-gray-950 text-white rounded-lg text-xs leading-relaxed shadow-xl border border-gray-800 opacity-0 invisible scale-95 origin-bottom group-hover:opacity-100 group-hover:visible group-hover:scale-100 transition-all duration-300 pointer-events-none whitespace-normal">
         <div className="font-bold text-gray-200 mb-1 flex items-center justify-between">
           <span>{details.label} Status</span>
           <span className="text-[10px] uppercase font-mono px-1 py-0.2 bg-gray-800 text-gray-400 rounded">Definition</span>
         </div>
-        <div className="text-gray-300 font-normal">
+        <div className="text-gray-300 font-normal border-t border-gray-800/40 mt-1.5 pt-1.5 leading-normal">
           {details.description}
         </div>
         {/* Tooltip caret */}

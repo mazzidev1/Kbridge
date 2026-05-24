@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatCurrency, formatPercent, MOCK_INVOICES } from '../data';
-import { ArrowLeft, Clock, Building2, ShieldCheck, Download, Link as LinkIcon, Database, Check, Wallet, Eye, FileText, AlertTriangle, X, Info, TrendingUp, Calculator } from 'lucide-react';
+import { ArrowLeft, Clock, Building2, ShieldCheck, Download, Link as LinkIcon, Database, Check, Wallet, Eye, FileText, AlertTriangle, X, Info, TrendingUp, ArrowRightLeft, Users, Tag } from 'lucide-react';
 import { InvestorAllocation, UserInvestment, Document, Invoice } from '../types';
 import { DocumentPreviewModal } from './DocumentPreviewModal';
 import { BusinessLogo } from './InvoiceList';
@@ -17,6 +17,7 @@ interface InvoiceDetailProps {
   backText: string;
   onViewBorrower: (name: string) => void;
   availableBalance?: number;
+  userListings?: any[];
 }
 
 export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ 
@@ -27,7 +28,8 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
   onInvest, 
   backText, 
   onViewBorrower,
-  availableBalance = 1500000
+  availableBalance = 1500000,
+  userListings = []
 }) => {
   const [sharesToBuy, setSharesToBuy] = useState<number>(1);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -37,15 +39,114 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
   const [showConfirm, setShowConfirm] = useState(false);
   const [showContractPreview, setShowContractPreview] = useState(false);
 
-  // Projection Calculator State
-  const [calcPrincipal, setCalcPrincipal] = useState<number>(10000);
-  const [calcDays, setCalcDays] = useState<number>(invoice.termDays);
+  // Secondary Market listings for sold out invoices
+  const [secondaryListings, setSecondaryListings] = useState<{
+    id: string;
+    seller: string;
+    shares: number;
+    price: number;
+    isBuying: boolean;
+    isBought: boolean;
+  }[]>([]);
 
   useEffect(() => {
-    setCalcDays(invoice.termDays);
+    // Generate some highly realistic secondary listings in the 50,000 range
+    // when primary tokens are sold out (availableTokens === 0)
+    if (invoice.availableTokens === 0) {
+      setSecondaryListings([
+        {
+          id: `${invoice.id}-sec-1`,
+          seller: '0x71C8...' + invoice.id.substring(2) + '3A9B',
+          shares: 12500,
+          price: invoice.tokenPrice,
+          isBuying: false,
+          isBought: false,
+        },
+        {
+          id: `${invoice.id}-sec-2`,
+          seller: '0x992A...' + invoice.id.substring(2) + 'B4F1',
+          shares: 8400,
+          price: invoice.tokenPrice,
+          isBuying: false,
+          isBought: false,
+        },
+        {
+          id: `${invoice.id}-sec-3`,
+          seller: '0x4F05...' + invoice.id.substring(2) + 'D722',
+          shares: 14000,
+          price: invoice.tokenPrice,
+          isBuying: false,
+          isBought: false,
+        }
+      ]);
+    } else {
+      setSecondaryListings([]);
+    }
   }, [invoice]);
 
-  const calcProfit = (calcPrincipal * (invoice.yieldRate / 100)) * (calcDays / 365);
+  // Merge user's listings of this invoice into the listings
+  const listingsToDisplay = useMemo(() => {
+    const currentInvoiceUserListings = userListings
+      .filter((l: any) => l.invoiceId === invoice.id)
+      .map((l: any) => ({
+        id: l.id,
+        seller: l.seller,
+        shares: l.shares,
+        price: l.price,
+        isBuying: l.isBuying,
+        isBought: l.isBought,
+        isUserListing: true,
+      }));
+    
+    // Show user listings prominently at the top of secondary options!
+    return [...currentInvoiceUserListings, ...secondaryListings];
+  }, [userListings, secondaryListings, invoice.id]);
+
+  const handleBuySecondary = (listingId: string) => {
+    if (!walletAddress) {
+      onConnect();
+      return;
+    }
+
+    const listing = listingsToDisplay.find(l => l.id === listingId);
+    if (!listing) return;
+
+    const cost = listing.shares * listing.price;
+    if (cost > availableBalance) {
+      alert(`Insufficient balance. This P2P purchase requires ${formatCurrency(cost)} USDC but your wallet only holds ${formatCurrency(availableBalance)} USDC.`);
+      return;
+    }
+
+    // Set buying state to true for this listing
+    setSecondaryListings(prev => prev.map(l => l.id === listingId ? { ...l, isBuying: true } : l));
+
+    setTimeout(() => {
+      // Execute the purchase
+      const secondaryExpectedReturn = (cost * (invoice.yieldRate / 100)) * (invoice.termDays / 365);
+      onInvest({
+        invoiceId: invoice.id,
+        borrowerName: `${invoice.borrowerName} (Secondary)`,
+        shares: listing.shares,
+        totalCost: cost,
+        expectedReturn: secondaryExpectedReturn,
+        maturityDate: invoice.maturityDate,
+      });
+
+      setSecondaryListings(prev => prev.map(l => l.id === listingId ? { ...l, isBuying: false, isBought: true } : l));
+      
+      // Update our simulation's local recent investors
+      const newInvestor: InvestorAllocation = {
+         id: Math.random().toString(36).substring(7),
+         address: walletAddress,
+         shares: listing.shares,
+         timestamp: 'Just now',
+         value: cost,
+         txHash: '0x' + Array.from({length: 8}, () => Math.floor(Math.random()*16).toString(16)).join(''),
+         status: 'Confirmed'
+      };
+      setLiveInvestors(prev => [newInvestor, ...prev.slice(0, 4)]);
+    }, 1500);
+  };
 
   // Deriving values based on user input
   const totalCost = sharesToBuy * invoice.tokenPrice;
@@ -170,10 +271,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
               </div>
               <div className="w-full">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
-                  <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-800 border border-blue-100">
-                    {invoice.originator} Originated
-                  </div>
-                  <span className="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
+                  <span className="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-200" id={`detail-id-${invoice.id}`}>
                     {invoice.id}
                   </span>
                   <InvoiceStatusBadge status={invoice.status} />
@@ -510,101 +608,121 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                       </button>
                     </>
                   ) : (
-                    <div className="text-center py-6 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="text-gray-500 font-medium">Fully Subscribed</div>
-                      <div className="text-xs text-gray-400 mt-1">No tokens available for purchase.</div>
-                    </div>
-                  )}
-                  
-                  {/* Interactive Yield Calculator */}
-                  <div className="border-t border-gray-150 pt-5 space-y-3.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-gray-900 flex items-center uppercase tracking-wider">
-                        <Calculator className="h-3.5 w-3.5 mr-1.5 text-blue-600" />
-                        Yield Projector
-                      </span>
-                      <span className="text-[10px] text-gray-400 font-medium">Predict return payouts</span>
-                    </div>
-
-                    <div className="bg-gray-50/70 border border-gray-200 rounded-xl p-4 space-y-4">
-                      
-                      {/* Principal amount slider */}
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-gray-500 font-medium">Principal Amount</span>
-                          <span className="font-mono font-bold text-gray-950">{formatCurrency(calcPrincipal)}</span>
-                        </div>
-                        <div className="relative flex items-center">
-                          <input 
-                            type="number" 
-                            className="w-full text-right p-2 pr-12 text-xs font-mono border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-black bg-white"
-                            value={calcPrincipal}
-                            onChange={(e) => setCalcPrincipal(Math.max(0, parseInt(e.target.value) || 0))}
-                          />
-                          <span className="absolute right-3 text-[10px] font-bold text-gray-400 font-mono select-none">USDC</span>
-                        </div>
-                        <input 
-                          type="range"
-                          min="500"
-                          max="250000"
-                          step="500"
-                          value={calcPrincipal}
-                          onChange={(e) => {
-                            setCalcPrincipal(parseInt(e.target.value));
-                          }}
-                          className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
-                        />
+                    <div className="space-y-4 animate-in fade-in duration-300">
+                      <div className="text-center py-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="text-gray-500 text-sm font-semibold">Primary Offering Sold Out</div>
+                        <div className="text-xs text-gray-400 mt-1">100% of tokens have been minted and allocated.</div>
                       </div>
 
-                      {/* Time horizon selector and slider */}
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-gray-500 font-medium">Time Horizon</span>
-                          <span className="font-mono font-bold text-gray-950">{calcDays} Days</span>
+                      {/* Secondary Market section */}
+                      <div className="border-t border-gray-150 pt-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-gray-900 flex items-center uppercase tracking-wider">
+                            <ArrowRightLeft className="h-4 w-4 mr-1.5 text-blue-600" />
+                            Secondary Market Resales
+                          </span>
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-50 text-green-700 border border-green-200 shrink-0">
+                            P2P LIVE
+                          </span>
                         </div>
                         
-                        <div className="grid grid-cols-4 gap-1.5 font-mono">
-                          {[30, 90, 180, 365].map(days => (
-                            <button
-                              key={days}
-                              type="button"
-                              onClick={() => setCalcDays(days)}
-                              className={`py-1 text-center rounded text-xs font-medium border transition-colors select-none ${
-                                calcDays === days 
-                                  ? 'bg-black text-white border-black shadow-sm' 
-                                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                              }`}
-                            >
-                              {days}d
-                            </button>
-                          ))}
-                        </div>
+                        <p className="text-[11px] text-gray-500 leading-normal">
+                          Purchase fractionalized share lots listed by early asset holders looking for immediate liquidity.
+                        </p>
 
-                        <input 
-                          type="range"
-                          min="15"
-                          max="365"
-                          step="5"
-                          value={calcDays}
-                          onChange={(e) => setCalcDays(parseInt(e.target.value))}
-                          className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black mt-1"
-                        />
+                        <div className="space-y-3 mt-2">
+                          {listingsToDisplay.map(listing => {
+                            const isUserListing = (listing as any).isUserListing;
+                            const lotCost = listing.shares * listing.price;
+                            const isAffordable = availableBalance >= lotCost;
+                            
+                            return (
+                              <div 
+                                key={listing.id} 
+                                className={`border rounded-xl p-3.5 transition-all text-xs flex flex-col justify-between ${
+                                  listing.isBought 
+                                    ? 'bg-green-50/50 border-green-200 opacity-90' 
+                                    : isUserListing
+                                      ? 'bg-blue-50/40 border-blue-200 shadow-xs'
+                                      : 'bg-white border-gray-200 hover:border-gray-300 shadow-sm'
+                                }`}
+                              >
+                                <div className="flex justify-between items-center mb-2.5">
+                                  <div className="flex flex-col">
+                                    <span className="text-[10px] font-mono text-gray-400 font-semibold uppercase flex items-center">
+                                      <Users className="h-3 w-3 mr-1" />
+                                      {isUserListing ? (
+                                        <span className="text-blue-600 font-bold bg-blue-50/80 px-1.5 py-0.5 rounded border border-blue-100 flex items-center">
+                                          Your Active Listing
+                                        </span>
+                                      ) : (
+                                        `Holder ${listing.seller}`
+                                      )}
+                                    </span>
+                                    <span className="font-mono text-sm font-bold text-gray-900 mt-1.5">
+                                      {listing.shares.toLocaleString()} Shares
+                                    </span>
+                                  </div>
+                                  <div className="text-right flex flex-col">
+                                    <span className="text-[10px] font-mono text-gray-400 uppercase tracking-wide font-medium">Price lot</span>
+                                    <span className="font-mono text-sm font-semibold text-gray-900 mt-0.5">
+                                      {formatCurrency(lotCost)}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-between pt-2 border-t border-gray-100/70 mt-1">
+                                  <span className="text-[10px] text-gray-500 font-mono font-medium">
+                                    @ {formatCurrency(listing.price)}/share
+                                  </span>
+                                  {listing.isBought ? (
+                                    <span className="inline-flex items-center text-xs font-semibold text-green-700 bg-green-100 px-3 py-1 rounded-lg">
+                                      <Check className="h-3 w-3 mr-1" />
+                                      Purchased
+                                    </span>
+                                  ) : isUserListing ? (
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 select-none">
+                                      Listed Order
+                                    </span>
+                                  ) : (
+                                    <button
+                                      disabled={listing.isBuying || (walletAddress !== null && !isAffordable)}
+                                      onClick={() => handleBuySecondary(listing.id)}
+                                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center cursor-pointer ${
+                                        listing.isBuying 
+                                          ? 'bg-blue-100 text-blue-700' 
+                                          : !walletAddress 
+                                            ? 'bg-black text-white hover:bg-gray-800'
+                                            : !isAffordable
+                                              ? 'bg-red-50 text-red-700 border border-red-100 cursor-not-allowed'
+                                              : 'bg-blue-600 text-white hover:bg-blue-700'
+                                      }`}
+                                    >
+                                      {listing.isBuying ? (
+                                        <div className="flex items-center space-x-1">
+                                          <svg className="animate-spin h-3 w-3 text-blue-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                          </svg>
+                                          <span>Escrowing...</span>
+                                        </div>
+                                      ) : !walletAddress ? (
+                                        'Connect Wallet'
+                                      ) : !isAffordable ? (
+                                        'Over Balance'
+                                      ) : (
+                                        'Buy Lot'
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-
-                      {/* Return calculation outputs */}
-                      <div className="pt-3 border-t border-gray-200/50 flex justify-between items-center text-xs">
-                        <div>
-                          <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Projected Interest</span>
-                          <span className="block font-mono font-bold text-green-600 text-sm mt-0.5">+{formatCurrency(calcProfit)}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Total Payback</span>
-                          <span className="block font-mono font-extrabold text-gray-950 text-sm mt-0.5">{formatCurrency(calcPrincipal + calcProfit)}</span>
-                        </div>
-                      </div>
-
                     </div>
-                  </div>
+                  )}
 
                   <div className="flex items-start bg-blue-50 p-3 rounded-md border border-blue-100">
                     <LinkIcon className="h-4 w-4 text-blue-500 mr-2 shrink-0 mt-0.5" />

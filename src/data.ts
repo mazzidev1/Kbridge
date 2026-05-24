@@ -56,9 +56,9 @@ const generateMockInvoices = (): Invoice[] => {
       interestTotal: 10000,
       maturityDate: '2026-08-21',
       termDays: 90,
-      tokenPrice: 1000,
-      totalTokens: 100,
-      availableTokens: 42,
+      tokenPrice: 2,
+      totalTokens: 50000,
+      availableTokens: 21000,
       technologyFeeRate: 0.005,
       status: 'Funding',
       lineItems: [
@@ -71,10 +71,10 @@ const generateMockInvoices = (): Invoice[] => {
         { id: 'd3', name: 'Bill of Lading', type: 'PDF', size: '2.1 MB', url: '#' },
       ],
       recentInvestors: [
-        { id: 'i1', address: '0x71C...3a9B', shares: 5, timestamp: '10 mins ago', value: 5000, txHash: '0x32a1...bc29', status: 'Confirmed' },
-        { id: 'i2', address: '0x992...b4f1', shares: 12, timestamp: '2 hours ago', value: 12000, txHash: '0x4f12...e131', status: 'Confirmed' },
-        { id: 'i3', address: '0x1A4...e88c', shares: 20, timestamp: '5 hours ago', value: 20000, txHash: '0x5bb4...8a9c', status: 'Confirmed' },
-        { id: 'i4', address: '0x4F0...d722', shares: 2, timestamp: '1 day ago', value: 2000, txHash: '0x629c...1d24', status: 'Confirmed' },
+        { id: 'i1', address: '0x71C...3a9B', shares: 2500, timestamp: '10 mins ago', value: 5000, txHash: '0x32a1...bc29', status: 'Confirmed' },
+        { id: 'i2', address: '0x992...b4f1', shares: 6000, timestamp: '2 hours ago', value: 12000, txHash: '0x4f12...e131', status: 'Confirmed' },
+        { id: 'i3', address: '0x1A4...e88c', shares: 10000, timestamp: '5 hours ago', value: 20000, txHash: '0x5bb4...8a9c', status: 'Confirmed' },
+        { id: 'i4', address: '0x4F0...d722', shares: 1000, timestamp: '1 day ago', value: 2000, txHash: '0x629c...1d24', status: 'Confirmed' },
       ]
     },
     {
@@ -89,9 +89,9 @@ const generateMockInvoices = (): Invoice[] => {
       interestTotal: 36000,
       maturityDate: '2026-11-15',
       termDays: 120,
-      tokenPrice: 5000,
-      totalTokens: 50,
-      availableTokens: 10,
+      tokenPrice: 5,
+      totalTokens: 50000,
+      availableTokens: 10000,
       technologyFeeRate: 0.005,
       status: 'Funding',
       lineItems: [
@@ -103,8 +103,8 @@ const generateMockInvoices = (): Invoice[] => {
         { id: 'd5', name: 'Customs Declaration', type: 'PDF', size: '1.1 MB', url: '#' },
       ],
       recentInvestors: [
-        { id: 'i5', address: '0x2B1...8c4A', shares: 15, timestamp: '30 mins ago', value: 75000, txHash: '0x88f1...ca34', status: 'Confirmed' },
-        { id: 'i6', address: '0x88C...a19f', shares: 25, timestamp: '2 days ago', value: 125000, txHash: '0x992b...e165', status: 'Confirmed' },
+        { id: 'i5', address: '0x2B1...8c4A', shares: 15000, timestamp: '30 mins ago', value: 75000, txHash: '0x88f1...ca34', status: 'Confirmed' },
+        { id: 'i6', address: '0x88C...a19f', shares: 25000, timestamp: '2 days ago', value: 125000, txHash: '0x992b...e165', status: 'Confirmed' },
       ]
     }
   ];
@@ -118,8 +118,8 @@ const generateMockInvoices = (): Invoice[] => {
     const sector = genericCompanySurnames[i % genericCompanySurnames.length];
     const borrowerName = `${genericCompanyNames[i % genericCompanyNames.length]}${sector} Inc.`;
     const invoiceAmount = Math.floor(Math.random() * 80 + 20) * 10000;
-    const tokenPrice = invoiceAmount >= 500000 ? 5000 : 1000;
-    const totalTokens = invoiceAmount / tokenPrice;
+    const tokenPrice = Math.max(1, Math.round(invoiceAmount / 50000));
+    const totalTokens = Math.floor(invoiceAmount / tokenPrice);
     const logoColor = genericColors[i % genericColors.length];
     
     const statuses: Invoice['status'][] = ['Pending', 'Tokenized', 'Funding', 'Fully Funded', 'Active', 'Matured', 'Settled', 'Defaulted'];
@@ -144,15 +144,20 @@ const generateMockInvoices = (): Invoice[] => {
     
     const isClosed = status !== 'Pending' && status !== 'Tokenized' && status !== 'Funding';
     const numInvestors = isClosed ? Math.floor(Math.random() * 5) + 3 : Math.floor(Math.random() * 3);
-    const recentInvestors: InvestorAllocation[] = Array.from({ length: numInvestors }).map((_, idx) => ({
-      id: `i-${i}-${idx}`,
-      address: '0x' + Math.random().toString(16).substring(2, 6).toUpperCase() + '...' + Math.random().toString(16).substring(2, 6).toUpperCase(),
-      shares: Math.floor(Math.random() * 10) + 1,
-      timestamp: isClosed ? `${Math.floor(Math.random() * 5 + 1)} days ago` : `${Math.floor(Math.random() * 10 + 1)} hours ago`,
-      value: Math.floor(Math.random() * 50000) + 5000,
-      txHash: '0x' + Array.from({length: 8}, () => Math.floor(Math.random()*16).toString(16)).join(''),
-      status: 'Confirmed'
-    }));
+    const recentInvestors: InvestorAllocation[] = Array.from({ length: numInvestors }).map((_, idx) => {
+      const value = Math.floor(Math.random() * 50000) + 5000;
+      const shares = Math.floor(value / tokenPrice) || 1;
+      const actualValue = shares * tokenPrice;
+      return {
+        id: `i-${i}-${idx}`,
+        address: '0x' + Math.random().toString(16).substring(2, 6).toUpperCase() + '...' + Math.random().toString(16).substring(2, 6).toUpperCase(),
+        shares,
+        timestamp: isClosed ? `${Math.floor(Math.random() * 5 + 1)} days ago` : `${Math.floor(Math.random() * 10 + 1)} hours ago`,
+        value: actualValue,
+        txHash: '0x' + Array.from({length: 8}, () => Math.floor(Math.random()*16).toString(16)).join(''),
+        status: 'Confirmed'
+      };
+    });
     
     return {
       id,

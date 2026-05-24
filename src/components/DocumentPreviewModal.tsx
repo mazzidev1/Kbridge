@@ -122,7 +122,7 @@ export const DocumentPreviewModal = ({
 
              <div className="mt-auto pt-16 text-center text-xs text-gray-400">
                <p>This invoice is electronically generated and represents a legally binding agreement.</p>
-               <p>Verified on KBridge Ledger • Originator: {invoice.originator}</p>
+               <p>Verified on KBridge Ledger • Token ID: {invoice.id}</p>
              </div>
           </div>
         </div>

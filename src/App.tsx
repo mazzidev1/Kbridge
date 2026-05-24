@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { InvoiceList } from './components/InvoiceList';
 import { InvoiceDetail } from './components/InvoiceDetail';
@@ -17,13 +17,58 @@ export default function App() {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [selectedBorrowerName, setSelectedBorrowerName] = useState<string | null>(null);
   
-  const [userPortfolio, setUserPortfolio] = useState<UserInvestment[]>([]);
+  // Seed default holdings so the user has assets to sell immediately!
+  const [userPortfolio, setUserPortfolio] = useState<UserInvestment[]>(() => {
+    try {
+      const saved = localStorage.getItem('user_portfolio_investments_v2');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {}
+    
+    return [
+      {
+        id: 'user-inv-1',
+        invoiceId: 'INV-2026-8921',
+        borrowerName: 'Acme Nuts & Bolts Manufacturing',
+        shares: 15000,
+        totalCost: 30000,
+        expectedReturn: 369.86,
+        maturityDate: '2026-08-21',
+        timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        txHash: '0x32a189f21ab29c48ea92a10bf34800e289c922afbcde289a4ff12e2cde132bc9',
+        status: 'Confirmed'
+      },
+      {
+        id: 'user-inv-2',
+        invoiceId: 'INV-2026-8922',
+        borrowerName: 'Global Timber Exports Ltd.',
+        shares: 8000,
+        totalCost: 40000,
+        expectedReturn: 946.85,
+        maturityDate: '2026-11-15',
+        timestamp: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+        txHash: '0x88f192b4fa34ca1e165de992be1658c42a19ffa12bc780ad91be802e21c6ba2c',
+        status: 'Confirmed'
+      }
+    ];
+  });
+
   const [availableBalance, setAvailableBalance] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('user_balance');
       return saved ? Number(saved) : 1500000;
     } catch (e) {
       return 1500000;
+    }
+  });
+
+  const [userListings, setUserListings] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('user_secondary_listings_v2');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
     }
   });
 
@@ -35,6 +80,18 @@ export default function App() {
       return [];
     }
   });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('user_portfolio_investments_v2', JSON.stringify(userPortfolio));
+    } catch (e) {}
+  }, [userPortfolio]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('user_secondary_listings_v2', JSON.stringify(userListings));
+    } catch (e) {}
+  }, [userListings]);
 
   const handleToggleWatch = (borrowerName: string) => {
     setWatchedBorrowers(prev => {
@@ -69,6 +126,120 @@ export default function App() {
       } catch (e) {}
       return nextBalance;
     });
+  };
+
+  const handleSellSharesExecution = (
+    investmentId: string,
+    sharesToSell: number,
+    proceedsGot: number,
+    mode: 'instant' | 'listing',
+    askingPrice: number,
+    invoiceId: string
+  ) => {
+    setUserPortfolio(prev => {
+      return prev.map(inv => {
+        if (inv.id === investmentId) {
+          const remShares = inv.shares - sharesToSell;
+          if (remShares <= 0) {
+            return null; // completely sold out lot
+          }
+          const ratio = remShares / inv.shares;
+          return {
+            ...inv,
+            shares: remShares,
+            totalCost: inv.totalCost * ratio,
+            expectedReturn: inv.expectedReturn * ratio
+          };
+        }
+        return inv;
+      }).filter(Boolean) as UserInvestment[];
+    });
+
+    if (mode === 'instant') {
+      setAvailableBalance(prev => {
+        const nextBalance = prev + proceedsGot;
+        try {
+          localStorage.setItem('user_balance', String(nextBalance));
+        } catch (e) {}
+        return nextBalance;
+      });
+    } else {
+      // mode === 'listing' - Create limit order item
+      const newListing = {
+        id: `user-list-${Math.random().toString(36).substring(7)}`,
+        invoiceId: invoiceId,
+        seller: walletAddress ? `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}` : '0xMine',
+        shares: sharesToSell,
+        price: askingPrice,
+        isBuying: false,
+        isBought: false,
+        isUserListing: true,
+        timestamp: new Date().toISOString()
+      };
+      
+      setUserListings(prev => [newListing, ...prev]);
+    }
+  };
+
+  const handleCancelUserListing = (listingId: string) => {
+    const listing = userListings.find(l => l.id === listingId);
+    if (!listing) return;
+
+    setUserPortfolio(prev => {
+      const existing = prev.find(inv => inv.invoiceId === listing.invoiceId);
+      if (existing) {
+        return prev.map(inv => {
+          if (inv.invoiceId === listing.invoiceId) {
+            const originalInv = MOCK_INVOICES.find(i => i.id === inv.invoiceId);
+            const tokenPrice = originalInv?.tokenPrice || 2;
+            const extraReturn = (listing.shares * tokenPrice * (originalInv?.yieldRate || 5.0) / 100) * ((originalInv?.termDays || 90) / 365);
+            return {
+              ...inv,
+              shares: inv.shares + listing.shares,
+              totalCost: inv.totalCost + (listing.shares * tokenPrice),
+              expectedReturn: inv.expectedReturn + extraReturn,
+            };
+          }
+          return inv;
+        });
+      } else {
+        const originalInv = MOCK_INVOICES.find(i => i.id === listing.invoiceId);
+        const tokenPrice = originalInv?.tokenPrice || 2;
+        const totalCost = listing.shares * tokenPrice;
+        const expectedReturn = (totalCost * (originalInv?.yieldRate || 5.0) / 100) * ((originalInv?.termDays || 90) / 365);
+        const newInv: UserInvestment = {
+          id: `user-inv-${Math.random().toString(36).substring(7)}`,
+          invoiceId: listing.invoiceId,
+          borrowerName: originalInv?.borrowerName || 'Invoice Token',
+          shares: listing.shares,
+          totalCost: totalCost,
+          expectedReturn: expectedReturn,
+          maturityDate: originalInv?.maturityDate || '2026-09-01',
+          timestamp: new Date().toISOString(),
+          txHash: '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join(''),
+          status: 'Confirmed'
+        };
+        return [newInv, ...prev];
+      }
+    });
+
+    setUserListings(prev => prev.filter(l => l.id !== listingId));
+  };
+
+  const handleSimulateListingFill = (listingId: string) => {
+    const listing = userListings.find(l => l.id === listingId);
+    if (!listing) return;
+
+    const proceeds = listing.shares * listing.price;
+    setAvailableBalance(prev => {
+      const nextBalance = prev + proceeds;
+      try {
+        localStorage.setItem('user_balance', String(nextBalance));
+      } catch (e) {}
+      return nextBalance;
+    });
+
+    setUserListings(prev => prev.filter(l => l.id !== listingId));
   };
 
   if (!isAuthenticated) {
@@ -108,6 +279,7 @@ export default function App() {
             onConnect={() => setShowWalletModal(true)}
             onInvest={handleInvest}
             backText={currentView === 'borrower' ? 'Back to Borrower' : (currentView === 'portfolio' ? 'Back to Portfolio' : 'Back to Marketplace')}
+            userListings={userListings}
           />
         ) : currentView === 'borrower' && selectedBorrowerName ? (
            <BorrowerProfile 
@@ -124,12 +296,17 @@ export default function App() {
            <Portfolio 
              portfolio={userPortfolio} 
              watchedBorrowers={watchedBorrowers}
+             userListings={userListings}
+             onCancelListing={handleCancelUserListing}
+             onSellInvestment={handleSellSharesExecution}
+              onSimulateListingFill={handleSimulateListingFill}
              onViewBorrower={(name) => {
                setSelectedBorrowerName(name);
                setCurrentView('borrower');
              }}
              onBrowse={() => setCurrentView('marketplace')} 
              onSelectInvestment={(id) => setSelectedInvoiceId(id)} 
+             walletAddress={walletAddress}
            />
         ) : (
           <InvoiceList 

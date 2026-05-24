@@ -1,9 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { UserInvestment } from '../types';
 import { formatCurrency, MOCK_INVOICES } from '../data';
-import { PieChart as PieChartIcon, TrendingUp, Calendar, ArrowRight, ArrowUpRight, Database, Eye } from 'lucide-react';
+import { PieChart as PieChartIcon, TrendingUp, Calendar, ArrowRight, ArrowUpRight, Database, Eye, ArrowRightLeft, Tag, Trash2, CheckCircle2 } from 'lucide-react';
 import { BusinessLogo } from './InvoiceList';
+import { SellSharesModal } from './SellSharesModal';
 
 const getStatus = (maturityDate: string) => {
   const now = new Date();
@@ -19,16 +20,37 @@ const getStatus = (maturityDate: string) => {
 export const Portfolio = ({ 
   portfolio, 
   watchedBorrowers = [], 
+  userListings = [],
+  onCancelListing,
+  onSellInvestment,
+  onSimulateListingFill,
   onViewBorrower, 
   onBrowse, 
-  onSelectInvestment 
+  onSelectInvestment,
+  walletAddress
 }: { 
   portfolio: UserInvestment[], 
   watchedBorrowers?: string[], 
+  userListings?: any[],
+  onCancelListing?: (id: string) => void,
+  onSellInvestment?: (
+    investmentId: string,
+    sharesToSell: number,
+    proceedsGot: number,
+    mode: 'instant' | 'listing',
+    askingPrice: number,
+    invoiceId: string
+  ) => void,
+  onSimulateListingFill?: (id: string) => void,
   onViewBorrower?: (name: string) => void, 
   onBrowse: () => void, 
-  onSelectInvestment: (id: string) => void 
+  onSelectInvestment: (id: string) => void,
+  walletAddress?: string | null
 }) => {
+  const [selectedSellInvestment, setSelectedSellInvestment] = useState<UserInvestment | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [simulatingListingId, setSimulatingListingId] = useState<string | null>(null);
+
   const totalInvested = portfolio.reduce((acc, curr) => acc + curr.totalCost, 0);
   const totalExpectedReturn = portfolio.reduce((acc, curr) => acc + curr.expectedReturn, 0);
   const totalShares = portfolio.reduce((acc, curr) => acc + curr.shares, 0);
@@ -195,7 +217,7 @@ export const Portfolio = ({
                         <div className="text-sm text-gray-500 mt-0.5"><span className="font-mono">{inv.shares}</span> tokens • {inv.invoiceId}</div>
                       </div>
                     </div>
-                  <div className="text-left sm:text-right ml-7 sm:ml-0 flex items-center justify-end">
+                  <div className="text-left sm:text-right ml-7 sm:ml-0 flex items-center justify-end space-x-5">
                     <div>
                       <div className="text-sm text-gray-500 mb-1">Principal + Yield</div>
                       <div className="text-lg font-mono font-medium text-gray-900 mb-1">{formatCurrency(inv.totalCost + inv.expectedReturn)}</div>
@@ -203,7 +225,20 @@ export const Portfolio = ({
                          <span className="flex items-center"><ArrowUpRight className="h-3 w-3 mr-1" />+{formatCurrency(inv.expectedReturn)}</span>
                       </div>
                     </div>
-                    <div className="ml-6 text-gray-300 group-hover:text-gray-900 transition-colors opacity-0 group-hover:opacity-100 hidden sm:block">
+                    
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedSellInvestment(inv);
+                      }}
+                      className="inline-flex items-center px-3.5 py-2 border border-blue-200 bg-blue-50 hover:bg-blue-100 hover:border-blue-300 text-blue-700 text-xs font-bold rounded-lg cursor-pointer transition-all shadow-2xs"
+                    >
+                      <ArrowRightLeft className="h-3.5 w-3.5 mr-1.5" />
+                      Sell / List Lot
+                    </button>
+
+                    <div className="text-gray-300 group-hover:text-gray-900 transition-colors opacity-0 group-hover:opacity-100 hidden sm:block ml-2">
                       <ArrowRight className="h-5 w-5" />
                     </div>
                   </div>
@@ -214,6 +249,130 @@ export const Portfolio = ({
         </div>
       </div>
       </div>
+
+      {/* Active Secondary Market Listings */}
+      {userListings && userListings.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 mt-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-4 mb-5">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                <Tag className="h-5 w-5 mr-2 text-blue-600" />
+                My Active Listings (P2P Secondary Market)
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                These investments are listed on the secondary market for other users to purchase. You can simulate buyer fills or cancel orders anytime.
+              </p>
+            </div>
+            <span className="mt-2 sm:mt-0 text-xs font-mono font-medium text-blue-600 bg-blue-50/80 border border-blue-100 px-2.5 py-1 rounded-full flex items-center shadow-xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-500 mr-2 animate-pulse" />
+              {userListings.length} Active {userListings.length === 1 ? 'Order' : 'Orders'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {userListings.map((listing) => {
+              const matchedInvoice = MOCK_INVOICES.find(i => i.id === listing.invoiceId);
+              const invoiceId = listing.invoiceId;
+              const borrowerName = matchedInvoice?.borrowerName || 'Invoice Token Asset';
+              const origYield = matchedInvoice?.yieldRate || 5.0;
+              const tokenPrice = matchedInvoice?.tokenPrice || 2.0;
+
+              // Calculate buyer return APY based on selling price
+              const buyerYield = origYield * (tokenPrice / listing.price);
+              const lotCost = listing.shares * listing.price;
+              const isSimulating = simulatingListingId === listing.id;
+
+              return (
+                <div 
+                  key={listing.id} 
+                  className="border border-gray-200 hover:border-blue-300 hover:shadow-xs rounded-xl p-5 transition-all bg-white flex flex-col justify-between shadow-xs"
+                >
+                  <div>
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center space-x-2.5">
+                        <BusinessLogo 
+                          name={borrowerName} 
+                          sector={matchedInvoice?.sector} 
+                          color={matchedInvoice?.logoColor} 
+                          className="h-10 w-10 text-xs rounded-lg" 
+                        />
+                        <div>
+                          <h4 className="font-semibold text-gray-900 text-sm truncate max-w-[150px]">{borrowerName}</h4>
+                          <span className="text-[10px] font-mono font-semibold text-gray-500 bg-gray-50 border border-gray-100 px-1 py-0.5 rounded uppercase">
+                            {invoiceId}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] uppercase tracking-wider font-mono font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+                        Escrow Secure
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 py-3 border-t border-b border-gray-100/70 my-3 text-xs">
+                      <div>
+                        <div className="text-gray-400 text-[10px] uppercase font-mono font-semibold">Lot Size</div>
+                        <div className="font-mono font-bold text-gray-900 mt-0.5">{listing.shares.toLocaleString()} Shares</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-400 text-[10px] uppercase font-mono font-semibold text-right">Asking Price</div>
+                        <div className="font-mono font-bold text-blue-600 mt-0.5 text-right font-semibold">{formatCurrency(listing.price)}/sh</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-400 text-[10px] uppercase font-mono font-semibold">Escrow Value</div>
+                        <div className="font-mono font-bold text-gray-900 mt-0.5">{formatCurrency(lotCost)}</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-400 text-[10px] uppercase font-mono font-semibold text-right">Buyer APY</div>
+                        <div className="font-mono font-bold text-green-700 mt-0.5 text-right flex items-center justify-end">
+                          <TrendingUp className="h-3 w-3 mr-0.5" />
+                          {buyerYield.toFixed(2)}%
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2.5 mt-2 pt-1">
+                    <button
+                      type="button"
+                      disabled={isSimulating}
+                      onClick={() => onCancelListing?.(listing.id)}
+                      className="flex-1 inline-flex items-center justify-center px-2.5 py-1.5 border border-red-200 hover:border-red-300 bg-red-50 hover:bg-red-105 text-red-700 font-bold rounded-lg text-xs cursor-pointer transition-all"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-1" />
+                      De-list
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSimulating}
+                      onClick={() => {
+                        setSimulatingListingId(listing.id);
+                        setTimeout(() => {
+                          onSimulateListingFill?.(listing.id);
+                          setSimulatingListingId(null);
+                          setSuccessToast(`Filled! Your secondary limit order was successfully purchased by a decentralised buyer. ${formatCurrency(lotCost)} USDC added to your escrow balance.`);
+                          setTimeout(() => setSuccessToast(null), 6000);
+                        }, 1800);
+                      }}
+                      className="flex-1 inline-flex items-center justify-center px-2.5 py-1.5 border border-green-200 bg-green-50 hover:bg-green-100 text-green-700 font-bold rounded-lg text-xs cursor-pointer transition-all disabled:opacity-50"
+                    >
+                      {isSimulating ? (
+                        <div className="flex items-center space-x-1 animate-pulse">
+                          <span>Filling...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                          Simulate Fill
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Watched Borrowers Section */}
       {watchedBorrowers && watchedBorrowers.length > 0 && (
@@ -287,6 +446,54 @@ export const Portfolio = ({
           ))}
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {successToast && (
+        <div className="fixed bottom-5 right-5 z-50 bg-gray-950 text-white rounded-xl shadow-xl border border-gray-800 p-4 max-w-sm flex items-start space-x-3 shadow-2xl transition-all">
+          <div className="bg-green-500 rounded-full p-1 text-white shrink-0 mt-0.5">
+            <CheckCircle2 className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="font-bold text-xs uppercase tracking-wide text-gray-400">Platform Escrow Fill</div>
+            <p className="text-gray-200 text-xs mt-1 leading-normal">{successToast}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Sell Modal overlay */}
+      {selectedSellInvestment && (
+        (() => {
+          const selectedInvoice = MOCK_INVOICES.find(i => i.id === selectedSellInvestment.invoiceId);
+          if (!selectedInvoice) return null;
+          return (
+            <SellSharesModal
+              isOpen={!!selectedSellInvestment}
+              onClose={() => setSelectedSellInvestment(null)}
+              investment={selectedSellInvestment}
+              invoice={selectedInvoice}
+              onSellSuccess={(shares, proceeds, mode, askingPrice) => {
+                onSellInvestment?.(
+                  selectedSellInvestment.id,
+                  shares,
+                  proceeds,
+                  mode,
+                  askingPrice,
+                  selectedSellInvestment.invoiceId
+                );
+                
+                setSelectedSellInvestment(null);
+                
+                setSuccessToast(
+                  mode === 'instant'
+                    ? `Instant swap completed. Exchanged ${shares.toLocaleString()} shares. ${formatCurrency(proceeds)} USDC was credited directly to your active escrow balance.`
+                    : `Limit order created. Placed ${shares.toLocaleString()} shares onto P2P secondary orderbook at ${formatCurrency(askingPrice)} USDC per share.`
+                );
+                setTimeout(() => setSuccessToast(null), 7000);
+              }}
+            />
+          );
+        })()
+      )}
     </div>
   );
 };

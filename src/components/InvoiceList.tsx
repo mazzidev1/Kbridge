@@ -277,13 +277,13 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onSelectInvoice, onSel
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th scope="col" className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12">Compare</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Details</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Originator</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Yield & Term</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th scope="col" className="px-6 py-4 relative"><span className="sr-only">Actions</span></th>
+                <th scope="col" className="px-4 py-3.5 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider w-12">Compare</th>
+                <th scope="col" className="px-4 py-3.5 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Invoice Details</th>
+                <th scope="col" className="px-4 py-3.5 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Value</th>
+                <th scope="col" className="px-4 py-3.5 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Yield & Term</th>
+                <th scope="col" className="px-4 py-3.5 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                <th scope="col" className="px-4 py-3.5 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Shares Progress</th>
+                <th scope="col" className="px-4 py-3.5 pr-6 text-right text-[10px] font-bold text-gray-500 uppercase tracking-wider">Action</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -310,8 +310,8 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onSelectInvoice, onSel
                 </tr>
               ) : (
                 filteredInvoices.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-gray-50 transition-colors group">
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                  <tr key={inv.id} className="hover:bg-gray-50/60 transition-colors group">
+                    <td className="px-4 py-4 whitespace-nowrap text-center">
                       <input 
                         type="checkbox" 
                         className="rounded border-gray-300 text-black focus:ring-black h-4 w-4 cursor-pointer"
@@ -319,7 +319,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onSelectInvoice, onSel
                         onChange={() => handleToggleCompare(inv.id)}
                       />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div 
                           className="cursor-pointer hover:opacity-80 transition-opacity"
@@ -330,7 +330,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onSelectInvoice, onSel
                         >
                           <BusinessLogo name={inv.borrowerName} sector={inv.sector} color={inv.logoColor} />
                         </div>
-                        <div className="ml-4">
+                        <div className="ml-3.5">
                           <div 
                             className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
                             onClick={(e) => {
@@ -340,54 +340,48 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onSelectInvoice, onSel
                           >
                             {inv.borrowerName}
                           </div>
-                          <div className="text-sm font-mono text-gray-500 mt-0.5">{inv.id}</div>
+                          <div className="text-xs font-mono text-gray-400 mt-0.5">{inv.id}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-mono font-medium text-gray-900">{formatCurrency(inv.invoiceAmount)}</div>
-                      <div className="text-xs text-gray-500 mt-1">{inv.sector}</div>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="text-sm font-mono font-semibold text-gray-900">{formatCurrency(inv.invoiceAmount)}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{inv.sector}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-800 border border-blue-100">
-                        {inv.originator}
-                      </div>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="text-sm font-semibold text-gray-900">{formatPercent(inv.yieldRate)} APY</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{inv.termDays} days • {inv.maturityDate}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{formatPercent(inv.yieldRate)} APY</div>
-                      <div className="text-xs text-gray-500 mt-1">{inv.termDays} days • {inv.maturityDate}</div>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <InvoiceStatusBadge status={inv.status} />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col space-y-2">
-                        <InvoiceStatusBadge status={inv.status} />
-                        
-                        {inv.status === 'Funding' || inv.status === 'Tokenized' ? (
-                          <div className="w-[145px] animate-in fade-in duration-200">
-                            <div className="flex justify-between items-baseline font-mono text-[10px] text-gray-500 mb-1">
-                              <span className="font-semibold text-gray-700">{inv.availableTokens.toLocaleString()} left</span>
-                              <span>/ {inv.totalTokens.toLocaleString()} total</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-1 overflow-hidden">
-                              <div 
-                                className={`h-full rounded-full transition-all duration-300 ${inv.status === 'Tokenized' ? 'bg-indigo-600' : 'bg-amber-500'}`}
-                                style={{ width: `${((inv.totalTokens - inv.availableTokens) / inv.totalTokens) * 100}%` }}
-                              ></div>
-                            </div>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      {inv.status === 'Funding' || inv.status === 'Tokenized' ? (
+                        <div className="w-[145px] animate-in fade-in duration-200">
+                          <div className="flex justify-between items-baseline font-mono text-[10px] text-gray-500 mb-1 leading-none">
+                            <span className="font-bold text-gray-700">{inv.availableTokens.toLocaleString()} left</span>
+                            <span className="text-[9px] text-gray-400">/ {inv.totalTokens.toLocaleString()}</span>
                           </div>
-                        ) : (
-                          <div className="w-[145px] text-[10px] font-mono text-gray-400">
-                            {inv.status === 'Pending' ? 'Awaiting mint' : 'Closed • 100% Filled'}
+                          <div className="w-full bg-gray-100 border border-gray-200/50 rounded-full h-1 overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-300 ${inv.status === 'Tokenized' ? 'bg-indigo-600' : 'bg-amber-500'}`}
+                              style={{ width: `${((inv.totalTokens - inv.availableTokens) / inv.totalTokens) * 100}%` }}
+                            ></div>
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        <div className="w-[145px] text-[10px] font-mono text-gray-400 font-medium">
+                          {inv.status === 'Pending' ? 'Awaiting mint' : 'Closed • 100% Filled'}
+                        </div>
+                      )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-4 py-4 pr-6 whitespace-nowrap text-right">
                       <button 
                         onClick={() => onSelectInvoice(inv.id)}
-                        className="inline-flex items-center text-sm font-semibold text-blue-600 hover:text-blue-900 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        className="inline-flex items-center justify-center px-4 py-1.5 border border-blue-200 bg-blue-50/60 hover:bg-blue-600 text-blue-700 hover:text-white text-xs font-bold rounded-lg cursor-pointer transition-all duration-200 active:scale-95 shadow-2xs"
                       >
                         Invest
-                        <ChevronRight className="h-4 w-4 ml-1" />
+                        <ChevronRight className="h-3.5 w-3.5 ml-1 shrink-0" />
                       </button>
                     </td>
                   </tr>
@@ -532,16 +526,6 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onSelectInvoice, onSel
                       </td>
                       <td className="px-6 py-4 border-l border-gray-100 font-mono text-gray-950 font-semibold text-sm">
                         {formatCurrency(invB.invoiceAmount)}
-                      </td>
-                    </tr>
-
-                    <tr>
-                      <td className="px-6 py-4 font-semibold text-gray-700 bg-gray-50/20">Originator / Custodian</td>
-                      <td className="px-6 py-4 border-l border-gray-100">
-                         <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-100">{invA.originator}</span>
-                      </td>
-                      <td className="px-6 py-4 border-l border-gray-100">
-                         <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-100">{invB.originator}</span>
                       </td>
                     </tr>
 
