@@ -691,6 +691,8 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                                     <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 select-none">
                                       Listed Order
                                     </span>
+                                  ) : !walletAddress ? (
+                                    null
                                   ) : (
                                     <button
                                       disabled={listing.isBuying || (walletAddress !== null && !isAffordable)}
@@ -698,11 +700,9 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                                       className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center cursor-pointer ${
                                         listing.isBuying 
                                           ? 'bg-blue-100 text-blue-700' 
-                                          : !walletAddress 
-                                            ? 'bg-black text-white hover:bg-gray-800'
-                                            : !isAffordable
-                                              ? 'bg-red-50 text-red-700 border border-red-100 cursor-not-allowed'
-                                              : 'bg-blue-600 text-white hover:bg-blue-700'
+                                          : !isAffordable
+                                            ? 'bg-red-50 text-red-700 border border-red-100 cursor-not-allowed'
+                                            : 'bg-blue-600 text-white hover:bg-blue-700'
                                       }`}
                                     >
                                       {listing.isBuying ? (
@@ -713,8 +713,6 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                                           </svg>
                                           <span>Escrowing...</span>
                                         </div>
-                                      ) : !walletAddress ? (
-                                        'Connect Wallet'
                                       ) : !isAffordable ? (
                                         'Over Balance'
                                       ) : (
@@ -734,7 +732,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                   <div className="flex items-start bg-blue-50 p-3 rounded-md border border-blue-100">
                     <LinkIcon className="h-4 w-4 text-blue-500 mr-2 shrink-0 mt-0.5" />
                     <p className="text-xs text-blue-800 leading-relaxed">
-                      Transactions are immutable and verifiable on the public ledger. You bear the counterparty risk of the originating entity.
+                      Transactions are immutable and verifiable on the public ledger.
                     </p>
                   </div>
                 </>

@@ -108,58 +108,60 @@ export const BorrowerProfile: React.FC<BorrowerProfileProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <div className="lg:col-span-1">
+      <div className="space-y-8 mb-8">
+        <div className="w-full">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Active & Historical Facilities</h2>
-          <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden h-[400px] overflow-y-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50 sticky top-0 z-10">
-                <tr>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Facility ID</th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Yield & Term</th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th scope="col" className="px-6 py-4 relative"><span className="sr-only">Actions</span></th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {invoices.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-gray-50 transition-colors group">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                       <div className="text-sm font-mono text-gray-900">{inv.id}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-mono font-medium text-gray-900">{formatCurrency(inv.invoiceAmount)}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{formatPercent(inv.yieldRate)} APY</div>
-                      <div className="text-xs text-gray-500 mt-1">{inv.termDays} days • {inv.maturityDate}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <InvoiceStatusBadge status={inv.status} />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button 
-                        onClick={() => onSelectInvoice(inv.id)}
-                        className="inline-flex items-center text-sm font-semibold text-blue-600 hover:text-blue-900 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        View
-                        <ExternalLink className="h-4 w-4 ml-1" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm h-[400px] flex flex-col overflow-hidden">
+            <div className="overflow-x-auto overflow-y-auto flex-1">
+             <table className="min-w-full divide-y divide-gray-200">
+               <thead className="bg-gray-50 sticky top-0 z-10 border-b border-gray-200">
+                 <tr>
+                   <th scope="col" className="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Facility ID</th>
+                   <th scope="col" className="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Value</th>
+                   <th scope="col" className="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Yield & Term</th>
+                   <th scope="col" className="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                   <th scope="col" className="px-4 py-3 relative w-16"><span className="sr-only">Actions</span></th>
+                 </tr>
+               </thead>
+               <tbody className="bg-white divide-y divide-gray-150">
+                 {invoices.map((inv) => (
+                   <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors group">
+                     <td className="px-4 py-3 whitespace-nowrap">
+                       <div className="text-xs font-mono font-semibold text-gray-900">{inv.id}</div>
+                     </td>
+                     <td className="px-4 py-3 whitespace-nowrap">
+                       <div className="text-xs font-mono font-medium text-gray-900">{formatCurrency(inv.invoiceAmount)}</div>
+                     </td>
+                     <td className="px-4 py-3 whitespace-nowrap">
+                       <div className="text-xs font-semibold text-gray-950">{formatPercent(inv.yieldRate)} APY</div>
+                       <div className="text-[10px] text-gray-500 mt-0.5">{inv.termDays} days • {inv.maturityDate}</div>
+                     </td>
+                     <td className="px-4 py-3 whitespace-nowrap">
+                       <InvoiceStatusBadge status={inv.status} />
+                     </td>
+                     <td className="px-4 py-3 whitespace-nowrap text-right pr-4">
+                       <button 
+                         onClick={() => onSelectInvoice(inv.id)}
+                         className="inline-flex items-center justify-center px-2.5 py-1.5 border border-blue-100 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white text-[10px] font-bold rounded-lg cursor-pointer transition-all duration-200 active:scale-95 shadow-2xs"
+                       >
+                         View
+                         <ExternalLink className="h-3 w-3 ml-1 shrink-0" />
+                       </button>
+                     </td>
+                   </tr>
+                 ))}
+               </tbody>
+             </table>
+           </div>
+         </div>
+       </div>
         
-        <div className="lg:col-span-1">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 text-transparent select-none hidden lg:block">Chart</h2>
+        <div className="w-full">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Historical APY Trend</h2>
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 h-[400px] flex flex-col">
             <h3 className="text-sm font-semibold text-gray-900 mb-6 flex items-center">
               <TrendingUp className="h-4 w-4 mr-2 text-green-500" />
-              Historical APY Trend
+              Yield Rate Performance
             </h3>
             <div className="flex-1 w-full mt-4">
               <ResponsiveContainer width="100%" height="100%">
